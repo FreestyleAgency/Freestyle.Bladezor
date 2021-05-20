@@ -1,0 +1,23 @@
+﻿@inject IPortalService PortalService
+
+@* HACK: the "target" value here is important so as to not trigger the built-in interception mechanism in Blazor *@
+<a href="@Url" @onclick="Intercept" target="__stack" class="@CssClass" @onclick:stopPropagation @onclick:preventDefault>@ChildContent</a>
+
+@code {
+	[Parameter]
+	public string Url { get; set; }
+
+	[Parameter]
+	public string CssClass { get; set; }
+
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public IDictionary<string, object> AdditionalAttributes { get; set; }
+
+	private async Task Intercept()
+	{
+		PortalService.ShowHelpTopic(Url);
+	}
+}

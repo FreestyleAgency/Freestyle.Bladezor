@@ -1,0 +1,82 @@
+﻿@implements IDisposable
+
+@if (visible && authorized)
+{
+	<NavItem Text="@name" Href="@path" @key="@path" />
+}
+
+@code {
+	private IModule _module;
+
+	bool loaded;
+	bool visible;
+	bool authorized;
+	string name;
+	string path;
+
+	[Parameter]
+	public IModule Module
+	{
+		get { return _module; }
+		set
+		{
+			if (_module == value) return;
+
+			if (_module != null)
+			{
+				_module.AuthorizationChanged -= HandleStateChanged;
+				_module.VisibilityChanged -= HandleStateChanged;
+				_module.NameChanged -= HandleStateChanged;
+				_module.PathChanged -= HandleStateChanged;
+			}
+
+			_module = value;
+
+			_module.AuthorizationChanged += HandleStateChanged;
+			_module.VisibilityChanged += HandleStateChanged;
+			_module.NameChanged += HandleStateChanged;
+			_module.PathChanged += HandleStateChanged;
+
+			loaded = false;
+		}
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!loaded)
+		{
+			loaded = true;
+
+			await UpdateState();
+		}
+
+		await base.OnParametersSetAsync();
+	}
+
+	private async void HandleStateChanged(object sender, EventArgs eventArgs)
+	{
+		await UpdateState();
+	}
+
+	private async Task UpdateState()
+	{
+		visible = await Module.IsVisible();
+		authorized = await Module.IsAuthorized();
+
+		if (visible && authorized)
+		{
+			name = await Module.GetName();
+			path = await Module.GetPath();
+		}
+
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		Module.AuthorizationChanged -= HandleStateChanged;
+		Module.VisibilityChanged -= HandleStateChanged;
+		Module.NameChanged -= HandleStateChanged;
+		Module.PathChanged -= HandleStateChanged;
+	}
+}

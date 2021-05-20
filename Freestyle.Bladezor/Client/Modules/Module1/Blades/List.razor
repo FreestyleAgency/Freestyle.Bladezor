@@ -1,0 +1,50 @@
+﻿@inherits BladeBase
+@layout StackLayout
+@page "/module1/stack/{StackId:int}/list"
+
+<div class="pf-c-page__main-section pf-m-light">
+	<Content>
+		<p>This is a fake list.</p>
+	</Content>
+</div>
+
+<div class="pf-c-page__main-section pf-m-light">
+	<Content>
+		<p>This is the default blade for this stack.</p>
+		<p><BladeLink Url="/module1/stack/1/list" BladeTitle="Example list blade" BladeSubtitle="Launches detail blades while remaining visible" BladeCssClass="bz-blade-detail-with-list" BladeShown="Shrink" BladeClosed="Expand">Push list blade</BladeLink></p>
+		<p><BladeLink Url="/module1/stack/1/list/detail" BladeTitle="Example detail blade" BladeCssClass="bz-blade-detail-with-list" BladeShown="Shrink" BladeClosed="Expand">Push detail blade</BladeLink></p>
+		<p><BladeLink Url="/common/iframe" BladeTitle="Example iframe" BladeSubtitle="You can have anything you like here" BladeCssClass="bz-blade-detail-with-list" BladeShown="Shrink" BladeClosed="Expand">Push iframe</BladeLink></p>
+		<p><BladeLink Url="/counter" BladeTitle="Example page" BladeSubtitle="This example came with the Blazor starter" BladeCssClass="bz-blade-detail-with-list" BladeShown="Shrink" BladeClosed="Expand">Push page</BladeLink></p>
+	</Content>
+</div>
+
+@code {
+	private bool _firstLoad = true;
+	private string _originalCssClass;
+
+	[Parameter]
+	public int StackId { get; set; }
+
+	protected override void OnParametersSet()
+	{
+		if (_firstLoad)
+		{
+			_originalCssClass = BladeContext?.CssClass;
+			_firstLoad = false;
+		}
+
+		Title = "This is a title";
+
+		base.OnParametersSet();
+	}
+
+	private async Task Shrink()
+	{
+		BladeContext.CssClass = "bz-blade-narrow";
+	}
+
+	private async Task Expand()
+	{
+		BladeContext.CssClass = _originalCssClass;
+	}
+}

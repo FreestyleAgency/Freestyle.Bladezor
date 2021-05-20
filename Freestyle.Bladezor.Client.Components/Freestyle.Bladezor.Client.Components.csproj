@@ -1,0 +1,54 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <RazorLangVersion>3.0</RazorLangVersion>
+    <Authors>Freestyle Interactive Ltd.</Authors>
+    <Product>Bladezor</Product>
+    <Description>Razor/Blazor components for the Bladezor portal framework.</Description>
+	  <AssemblyVersion>1.0.0.1</AssemblyVersion>
+	  <FileVersion>1.0.0.1</FileVersion>
+	  <VersionPrefix>1.0.1</VersionPrefix>
+	  <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+    <PackageIcon>FS-Splash.png</PackageIcon>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="Freestyle.Blazor.Patternfly" Version="21.2.269.232" />
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="5.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="5.0.2" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\Freestyle.Bladezor.Client.Core\Freestyle.Bladezor.Client.Core.csproj" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <Compile Update="Translations.Designer.cs">
+      <DependentUpon>Translations.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+    </Compile>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <EmbeddedResource Update="Translations.resx">
+      <LastGenOutput>Translations.Designer.cs</LastGenOutput>
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="FS-Splash.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>

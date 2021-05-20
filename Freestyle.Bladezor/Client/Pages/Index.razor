@@ -1,0 +1,31 @@
+﻿@page "/"
+@inject HttpClient HttpClient 
+@inject INotificationService NotificationService
+
+<section class="pf-c-page__main-section pf-m-light">
+	<Content>
+		<h1>System Homepage</h1>
+
+		<p>This is the homepage for the system. You would normally include signposts here, maybe an introduction and some basic help content. Or you could have some sort of dynamic dashboard system.</p>
+
+		<Button Text="Raise notification" @onclick="RaiseNotification" />
+		<Button Text="Raise local notification" @onclick="RaiseLocalNotification" />
+	</Content>
+</section>
+
+@code {
+	private async Task RaiseNotification()
+	{
+		await HttpClient.PostAsync("/api/Demo/RaiseNotification", null);
+	}
+
+	private async Task RaiseLocalNotification()
+	{
+		NotificationService.AddLocalNotification(new Notification()
+		{
+			Title = "Hello",
+			Description = "This is a local notification",
+			Severity = NotificationSeverity.Info
+		});
+	}
+}

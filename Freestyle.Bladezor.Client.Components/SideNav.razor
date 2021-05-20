@@ -1,0 +1,122 @@
+﻿@implements IDisposable
+@inject Freestyle.Bladezor.Client.Services.INavigationState NavigationState
+@inject NavigationManager NavigationManager
+
+@if (currentModule != null)
+{
+	<Nav>
+		@if (groupedRootNavItems != null && groupedRootNavItems.Count() > 1)
+		{
+			var nullGroup = groupedRootNavItems.FirstOrDefault(x => x.Key == null);
+			<NavList ForceAsSection="true">
+				<NavItem Text="Home" Href="@currentModulePath" Match="NavLinkMatch.All" />
+				@if (nullGroup != null)
+				{
+					@foreach (var item in nullGroup)
+					{
+						<SideNavNavItem NavItem="item" />
+					}
+				}
+			</NavList>
+			@foreach (var group in groupedRootNavItems.Where(x => x.Key != null))
+			{
+				<NavList Title="@group.Key?.Name">
+					@foreach (var item in group)
+					{
+						<SideNavNavItem NavItem="item" />
+					}
+				</NavList>
+			}
+		}
+		else if (rootNavItems != null)
+		{
+			<NavList>
+				<NavItem Text="Home" Href="@currentModulePath" Match="NavLinkMatch.All" />
+				@foreach (var item in rootNavItems)
+				{
+					<SideNavNavItem NavItem="item" />
+				}
+			</NavList>
+		}
+	</Nav>
+}
+
+@code {
+	private IModule currentModule;
+	private string currentModuleName;
+	private string currentModulePath;
+	private IEnumerable<INavItem> rootNavItems;
+	private IOrderedEnumerable<IGrouping<INavGroup, INavItem>> groupedRootNavItems;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (currentModule == null)
+		{
+			currentModule = NavigationState.CurrentModule;
+
+			await UpdateState();
+		}
+
+		NavigationState.CurrentModuleChanged += HandleModuleChanged;
+
+		if (currentModule != null)
+		{
+			currentModule.NameChanged += HandleStateChanged;
+			currentModule.PathChanged += HandleStateChanged;
+			currentModule.RootNavItemsChanged += HandleStateChanged;
+		}
+
+		await base.OnInitializedAsync();
+	}
+
+	private async void HandleStateChanged(object sender, EventArgs eventArgs)
+	{
+		await UpdateState();
+	}
+
+	private async void HandleModuleChanged(object sender, ModuleEventArgs eventArgs)
+	{
+		if (currentModule != null)
+		{
+			currentModule.NameChanged -= HandleStateChanged;
+			currentModule.PathChanged -= HandleStateChanged;
+			currentModule.RootNavItemsChanged -= HandleStateChanged;
+		}
+
+		currentModule = eventArgs.Module;
+
+		currentModule.NameChanged += HandleStateChanged;
+		currentModule.PathChanged += HandleStateChanged;
+		currentModule.RootNavItemsChanged += HandleStateChanged;
+
+		await UpdateState();
+	}
+
+	private async Task UpdateState()
+	{
+		groupedRootNavItems = null;
+
+		StateHasChanged();
+
+		if (currentModule != null)
+		{
+			currentModulePath = await currentModule.GetPath();
+			currentModuleName = await currentModule.GetName();
+			rootNavItems = await currentModule.GetRootNavItems();
+
+			if (rootNavItems != null)
+				groupedRootNavItems = rootNavItems.GroupBy(x => x.Group).OrderBy(x => x.Key?.SortOrder ?? -1);
+
+			StateHasChanged();
+		}
+	}
+
+	public void Dispose()
+	{
+		NavigationState.CurrentModuleChanged -= HandleModuleChanged;
+
+		currentModule.NameChanged -= HandleStateChanged;
+		currentModule.PathChanged -= HandleStateChanged;
+		currentModule.RootNavItemsChanged -= HandleStateChanged;
+	}
+}

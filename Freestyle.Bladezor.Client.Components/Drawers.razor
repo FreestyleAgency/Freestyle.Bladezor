@@ -1,0 +1,231 @@
+﻿@inject Freestyle.Bladezor.Client.Services.INotificationService NotificationService
+@inject IPortalService PortalService
+
+<div hidden="@(!(DrawerExpanded && DrawerType == DrawerType.Help))" class="pf-u-h-100">
+	<HelpSystem />
+</div>
+<div hidden="@(!(DrawerExpanded && DrawerType == DrawerType.Notifications))" class="pf-u-h-100">
+	<NotificationDrawer>
+		<HeaderActions>
+			<Dropdown Mode="DropdownMode.Kebab" HorizontalAlignment="LeftRightHorizontalAlignment.Right">
+				<DropdownButtonMenuItem Text="@Translations.Notifications_MarkAllRead" OnClick="async () => await NotificationService.MarkAllAsRead()" />
+				<DropdownButtonMenuItem Text="@Translations.Notifications_ClearAll" OnClick="async () => await NotificationService.Clear()" />
+			</Dropdown>
+			<div class="pf-c-drawer__close">
+				<button class="pf-c-button pf-m-plain" type="button" aria-label="@Translations.Notifications_Close" @onclick="Close">
+					<i class="fas fa-times" aria-hidden="true"></i>
+				</button>
+			</div>
+		</HeaderActions>
+		<ChildContent>
+			@if (!Notifications.Any())
+			{
+				<EmptyState Title="@Translations.Notifications_EmptyState_Title" IconCssClass="fas fa-cubes">
+					<ChildContent>@Translations.Notifications_EmptyState_Description</ChildContent>
+				</EmptyState>
+			}
+			else
+			{
+				var areGrouped = Notifications.Any(x => x.NotificationGroup != null);
+
+				if (areGrouped)
+				{
+					var groups = Notifications.GroupBy(x => x.NotificationGroup?.Id);
+					foreach (var group in groups)
+					{
+						<NotificationDrawerGroup Title="@(group.Key == null ? Translations.Notifications_Group_DefaultTitle : group.First().NotificationGroup.Title)">
+							@foreach (var notification in group)
+							{
+								var importance = GetImportance(notification);
+								<NotificationDrawerItem @key="notification.Id" Title="@notification.Title" Read="notification.Read" DateTime="notification.CreatedUtc" AutoUpdateTimestamp="true" Importance="importance" @onclick="async e => { if (!notification.Read) { await NotificationService.MarkAsRead(notification); } }">
+									<Actions>
+										@if (notification.ActionLinks != null)
+										{
+											foreach (var actionLink in notification.ActionLinks)
+											{
+												<LinkButton Href="@actionLink.Url" Text="@actionLink.Title" target="@actionLink.Target" />
+											}
+										}
+										<Dropdown Mode="DropdownMode.Kebab" HorizontalAlignment="LeftRightHorizontalAlignment.Right" @onclick:stopPropagation="true">
+											@if (notification.Read)
+											{
+												<DropdownButtonMenuItem Text="Mark as unread" OnClick="async () => await NotificationService.MarkAsUnread(notification)" />
+											}
+											else
+											{
+												<DropdownButtonMenuItem Text="Mark as read" OnClick="async () => await NotificationService.MarkAsRead(notification)" />
+											}
+											<DropdownButtonMenuItem Text="Dismiss" OnClick="async () => await NotificationService.DismissNotification(notification)" />
+										</Dropdown>
+									</Actions>
+									<ChildContent>
+										@notification.Description
+										@if (notification.ProgressPercent.HasValue)
+										{
+											@if (!String.IsNullOrEmpty(notification.ProgressDescription))
+											{
+												<p><small>@notification.ProgressDescription</small></p>
+											}
+											<Progress Importance="importance" CurrentValue="@notification.ProgressPercent.Value" ShowStatusIcon="false" ProgressTextPosition="InsideOutsidePosition.Outside" />
+										}
+									</ChildContent>
+								</NotificationDrawerItem>
+							}
+						</NotificationDrawerGroup>
+					}
+				}
+				else
+				{
+					foreach (var notification in Notifications)
+					{
+						var importance = GetImportance(notification);
+						<NotificationDrawerItem @key="notification.Id" Title="@notification.Title" Read="notification.Read" DateTime="notification.CreatedUtc" AutoUpdateTimestamp="true" Importance="importance" @onclick="async () => { if (!notification.Read) { await NotificationService.MarkAsRead(notification); } }">
+							<Actions>
+								<Dropdown Mode="DropdownMode.Kebab" HorizontalAlignment="LeftRightHorizontalAlignment.Right" @onclick:stopPropagation="true">
+									@if (notification.Read)
+									{
+										<DropdownButtonMenuItem Text="Mark as unread" OnClick="async () => await NotificationService.MarkAsUnread(notification)" />
+									}
+									else
+									{
+										<DropdownButtonMenuItem Text="Mark as read" OnClick="async () => await NotificationService.MarkAsRead(notification)" />
+									}
+									<DropdownButtonMenuItem Text="Dismiss" OnClick="async () => await NotificationService.DismissNotification(notification)" />
+								</Dropdown>
+							</Actions>
+							<ChildContent>
+								@notification.Description
+								@if (notification.ProgressPercent.HasValue)
+								{
+									@if (!String.IsNullOrEmpty(notification.ProgressDescription))
+									{
+										<p><small>@notification.ProgressDescription</small></p>
+									}
+									<Progress Importance="importance" CurrentValue="@notification.ProgressPercent.Value" ShowStatusIcon="false" ProgressTextPosition="InsideOutsidePosition.Outside" />
+								}
+							</ChildContent>
+						</NotificationDrawerItem>
+					}
+				}
+			}
+		</ChildContent>
+	</NotificationDrawer>
+</div>
+<div hidden="@(!(DrawerExpanded && DrawerType ==  DrawerType.Settings))" class="pf-u-h-100">
+	@SettingsDrawer
+</div>
+<div hidden="@(!(DrawerExpanded && DrawerType == DrawerType.Custom))" class="pf-u-h-100">
+	@CustomDrawer
+</div>
+<div id="modal-drawer" hidden="@(!(DrawerExpanded && DrawerType == DrawerType.Modal))" class="pf-u-h-100">
+	<ModalStack @ref="ModalStack" ModalPushed="ModalPushed" AllModalsPopped="AllModalsPopped" />
+</div>
+
+@code {
+	private bool _drawerExpanded;
+	private DrawerType _drawerType;
+	private IModalStack _modalStack;
+
+	private IModalStack ModalStack
+	{
+		get { return _modalStack; }
+		set
+		{
+			_modalStack = value;
+
+			PortalService.ModalStack = value;
+		}
+	}
+
+	[Parameter]
+	public bool DrawerExpanded
+	{
+		get { return _drawerExpanded; }
+		set
+		{
+			if (value == _drawerExpanded) return;
+
+			_drawerExpanded = value;
+
+			if (DrawerExpandedChanged.HasDelegate)
+				DrawerExpandedChanged.InvokeAsync(value);
+		}
+	}
+
+	[Parameter]
+	public EventCallback<bool> DrawerExpandedChanged { get; set; }
+
+	[Parameter]
+	public DrawerType DrawerType
+	{
+		get { return _drawerType; }
+		set
+		{
+			if (value == _drawerType) return;
+
+			_drawerType = value;
+
+			if (DrawerTypeChanged.HasDelegate)
+				DrawerTypeChanged.InvokeAsync(value);
+		}
+	}
+
+	[Parameter]
+	public EventCallback<DrawerType> DrawerTypeChanged { get; set; }
+
+	[Parameter]
+	public IEnumerable<Freestyle.Bladezor.Shared.Notification> Notifications { get; set; }
+
+	[Parameter]
+	public RenderFragment SettingsDrawer { get; set; }
+
+	[Parameter]
+	public RenderFragment CustomDrawer { get; set; }
+
+	private Importance GetImportance(Freestyle.Bladezor.Shared.Notification notification)
+	{
+		switch (notification.Severity)
+		{
+			case Bladezor.Shared.NotificationSeverity.Default: return Importance.Default;
+			case Bladezor.Shared.NotificationSeverity.Info: return Importance.Information;
+			case Bladezor.Shared.NotificationSeverity.Success: return Importance.Success;
+			case Bladezor.Shared.NotificationSeverity.Warning: return Importance.Warning;
+			case Bladezor.Shared.NotificationSeverity.Danger: return Importance.Danger;
+		}
+
+		return Importance.Default;
+	}
+
+	protected override void OnInitialized()
+	{
+		//PortalService.ModalStack = _modalStack;
+
+		base.OnInitialized();
+	}
+
+	private async Task ModalPushed()
+	{
+		DrawerType = DrawerType.Modal;
+		DrawerExpanded = true;
+	}
+
+	private async Task AllModalsPopped()
+	{
+		if (DrawerType == DrawerType.Modal)
+			DrawerExpanded = false;
+	}
+
+	private async Task Close()
+	{
+		if (DrawerType == DrawerType.Modal)
+		{
+			await PortalService.ModalStack.Pop();
+			if (!PortalService.ModalStack.Any())
+				DrawerExpanded = false;
+		}
+		else
+		{
+			DrawerExpanded = false;
+		}
+	}
+}

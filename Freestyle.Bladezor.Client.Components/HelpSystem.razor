@@ -1,0 +1,39 @@
+﻿@implements IDisposable
+@inject HttpClient HttpClient
+@inject IPortalService PortalService
+@inject Microsoft.Extensions.Options.IOptions<Freestyle.Bladezor.Client.BladezorOptions> Options
+
+<iframe src="@path" style="width: 100%; height: 100%"></iframe>
+
+@code {
+	private string body = null;
+	private string path = null;
+
+	private async Task Load(string href)
+	{
+		path = href;
+
+		await Task.FromResult(0);
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		PortalService.ShowHelpTopicRequested += OnShowHelpTopicRequested;
+
+		await Load(Options.Value.HelpSystem.IntialUrl);
+
+		await base.OnInitializedAsync();
+	}
+
+	private async void OnShowHelpTopicRequested(Object sender, HelpTopicEventArgs eventArgs)
+	{
+		await Load(eventArgs.Url);
+
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		PortalService.ShowHelpTopicRequested -= OnShowHelpTopicRequested;
+	}
+}

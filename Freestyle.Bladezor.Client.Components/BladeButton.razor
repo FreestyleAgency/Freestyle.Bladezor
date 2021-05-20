@@ -1,0 +1,113 @@
+﻿@implements IDisposable
+@using System.Reflection
+@using System.Collections.Generic
+@using System.Collections.ObjectModel
+@inject INavigationState NavigationState
+@inject IPortalService PortalService
+
+<Button ShowSpinner="ShowSpinner" AutoLoadingState="AutoLoadingState" ButtonStyle="ButtonStyle" Text="@Text" IconCssClass="@IconCssClass" IconPosition="IconPosition" Enabled="Enabled" Block="Block" Size="Size" @onclick="Intercept" type="button" />
+
+@code {
+	static readonly ReadOnlyDictionary<string, object> _emptyParametersDictionary = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>());
+
+	private bool active = false;
+
+	[Parameter]
+	public string Url { get; set; }
+
+	[Parameter]
+	public string BladeTitle { get; set; }
+
+	[Parameter]
+	public string BladeSubtitle { get; set; }
+
+	[CascadingParameter(Name = "Router")]
+	public Router Router { get; set; }
+
+	[Parameter]
+	public string BladeCssClass { get; set; }
+
+	[Parameter]
+	public EventCallback<BladeContext> BladeShown { get; set; }
+
+	[Parameter]
+	public EventCallback<BladeContext> BladeClosed { get; set; }
+
+	[Parameter]
+	public EventCallback<object> BladeReturnValueChanged { get; set; }
+
+	[CascadingParameter(Name = "BladeContext")]
+	public BladeContext BladeContext { get; set; }
+
+	[CascadingParameter(Name = "BladeStack")]
+	public BladeStack BladeStack { get; set; }
+
+	[Parameter]
+	public bool ShowSpinner { get; set; }
+
+	[Parameter]
+	public bool AutoLoadingState { get; set; } = true;
+
+	[Parameter]
+	public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Primary;
+
+	[Parameter]
+	public string Text { get; set; }
+
+	[Parameter]
+	public string IconCssClass { get; set; }
+
+	[Parameter]
+	public LeftRightHorizontalAlignment IconPosition { get; set; } = LeftRightHorizontalAlignment.Left;
+
+	[Parameter]
+	public bool Enabled { get; set; } = true;
+
+	[Parameter]
+	public bool Block { get; set; }
+
+	[Parameter]
+	public ButtonSize Size { get; set; }
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public IDictionary<string, object> AdditionalAttributes { get; set; }
+
+	protected override void OnInitialized()
+	{
+		BladeStack.StackChanged += OnStackChanged;
+
+		base.OnInitialized();
+	}
+
+	private void OnStackChanged(object sender, EventArgs eventArgs)
+	{
+		active = BladeStack.Blades.Any(x => x.Url == Url);
+	}
+
+	private async Task Intercept()
+	{
+		var bladeContext = await PortalService.OpenBlade(
+			context =>
+			{
+				context.Title = BladeTitle;
+				context.Subtitle = BladeSubtitle;
+				context.CssClass = BladeCssClass;
+
+				context.Closed += (s, e) => BladeClosed.InvokeAsync(context);
+				context.ReturnValueChanged += (s, e) => BladeReturnValueChanged.InvokeAsync(e.Value);
+			},
+			Url,
+			Router,
+			BladeStack,
+			BladeContext,
+			AdditionalAttributes
+		);
+
+		await BladeShown.InvokeAsync(bladeContext);
+	}
+
+	public void Dispose()
+	{
+		BladeStack.StackChanged -= OnStackChanged;
+	}
+}

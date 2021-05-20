@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <RootNamespace>Freestyle.Bladezor.Client</RootNamespace>
+    <Authors>Freestyle Interactive Ltd.</Authors>
+    <Product>Bladezor</Product>
+    <Description>Core classes and interfaces for the Bladezor portal framework.</Description>
+	  <AssemblyVersion>1.0.0.1</AssemblyVersion>
+	  <FileVersion>1.0.0.1</FileVersion>
+	  <VersionPrefix>1.0.1</VersionPrefix>
+	  <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+    <Company>Freestyle Interactive Ltd.</Company>
+    <PackageIcon>FS-Splash.png</PackageIcon>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="FS-Splash.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="5.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Extensions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="5.0.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Freestyle.Bladezor\Shared\Freestyle.Bladezor.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

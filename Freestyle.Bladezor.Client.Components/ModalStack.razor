@@ -1,0 +1,248 @@
+﻿@implements Freestyle.Bladezor.Client.Models.IModalStack
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject INavigationState NavigationState
+@inject IJSRuntime JSRuntime
+@inject IPortalService PortalService 
+
+<div class="bz-stack" @ref="_stackContainerRef">
+	@{
+		var top = _modals.FirstOrDefault();
+		var bottom = _modals.LastOrDefault();
+	}
+	@foreach (var modal in _modals.AsEnumerable().Reverse())
+	{
+		var isTop = modal == top;
+		var isBottom = modal == bottom;
+
+		<section @ref="modal.Ref" class="bz-modal pf-u-box-shadow-md-left @(isTop ? "bz-modal-top" : "bz-modal-tail") @(isBottom ? "bz-modal-bottom" : null) @modal.CssClass" role="dialog" hidden="@(!isTop)">
+			<CascadingValue Name="ModalStack" Value="this">
+				<CascadingValue Name="ModalContext" Value="modal">
+					@modal.RenderFragment
+				</CascadingValue>
+			</CascadingValue>
+		</section>
+	}
+</div>
+
+@code {
+	private Stack<ModalContext> _modals = new Stack<ModalContext>();
+	private ElementReference _stackContainerRef;
+
+	public string CurrentModalTitle
+	{
+		get { return _modals.Peek().Title; }
+	}
+
+	public string CurrentModalCssClass
+	{
+		get { return _modals.Peek().CssClass; }
+	}
+
+	[Parameter]
+	public Type InitialModalType { get; set; }
+
+	[Parameter]
+	public EventCallback AllModalsPopped { get; set; }
+
+	[Parameter]
+	public EventCallback ModalPushed { get; set; }
+
+	public event EventHandler StackChanged;
+	public event EventHandler CurrentModalTitleChanged;
+	public event EventHandler CurrentModalCssClassChanged;
+
+	/// <summary>
+	/// Read-only access the the current modal stack.
+	/// </summary>
+	public Stack<ModalContext> Modals
+	{
+		get { return new Stack<ModalContext>(_modals); }
+	}
+
+	protected override void OnInitialized()
+	{
+		base.OnInitialized();
+
+		NavigationManager.LocationChanged += LocationChanged;
+	}
+
+	private async void LocationChanged(object sender, LocationChangedEventArgs eventArgs)
+	{
+		if (_modals.Any())
+		{
+			_modals = new Stack<ModalContext>();
+		}
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (_modals == null)
+		{
+			_modals = new Stack<ModalContext>();
+		}
+
+		await base.OnParametersSetAsync();
+	}
+
+	public async Task Push(ModalContext modalContext)
+	{
+		modalContext.TitleChanged += OnModalTitleChanged;
+		modalContext.CssClassChanged += OnCssClassChanged;
+
+		_modals.Push(modalContext);
+
+		StateHasChanged();
+
+		await ModalPushed.InvokeAsync();
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	private void OnModalTitleChanged(object sender, ValueEventArgs<string> title)
+	{
+		if (sender == _modals.Peek())
+			CurrentModalTitleChanged?.Invoke(sender, title);
+
+		StateHasChanged();
+	}
+
+	private async void OnCssClassChanged(object sender, ValueEventArgs<string> cssClass)
+	{
+		if (sender == _modals.Peek())
+			CurrentModalCssClassChanged?.Invoke(sender, cssClass);
+
+		StateHasChanged();
+	}
+
+	public bool Any()
+	{
+		return _modals.Any();
+	}
+
+	public ModalContext Top()
+	{
+		return _modals.Peek();
+	}
+
+	public async Task PopAll(bool triggerEvents = true)
+	{
+		if (!_modals.Any()) return;
+
+		while (_modals.Any())
+		{
+			if (!await ConfirmCloseIfRequired(_modals.Peek())) return;
+
+			var popped = _modals.Pop();
+
+			popped.TitleChanged -= OnModalTitleChanged;
+			popped.OnClosed();
+		}
+
+		if (triggerEvents)
+		{
+			await AllModalsPopped.InvokeAsync();
+
+			StackChanged?.Invoke(this, EventArgs.Empty);
+		}
+	}
+
+	public async Task Pop()
+	{
+		if (!_modals.Any()) return;
+
+		if (!await ConfirmCloseIfRequired(_modals.Peek())) return;
+
+		var popped = _modals.Pop();
+
+		popped.TitleChanged -= OnModalTitleChanged;
+		popped.OnClosed();
+
+		if (!_modals.Any())
+		{
+			await AllModalsPopped.InvokeAsync();
+		}
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	public async Task PopTo(ModalContext modalInfo)
+	{
+		if (!_modals.Any()) return;
+
+		if (!await ConfirmCloseIfRequired(modalInfo)) return;
+
+		if (_modals.Contains(modalInfo))
+		{
+			while (_modals.Peek() != modalInfo)
+			{
+				var popped = _modals.Pop();
+
+				popped.TitleChanged -= OnModalTitleChanged;
+				popped.OnClosed();
+			}
+		}
+
+		StateHasChanged();
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	public async Task PopPast(ModalContext modalInfo)
+	{
+		if (!_modals.Any()) return;
+
+		if (!await ConfirmCloseIfRequired(modalInfo)) return;
+
+		if (_modals.Contains(modalInfo))
+		{
+			ModalContext popped = _modals.Pop();
+			popped.TitleChanged -= OnModalTitleChanged;
+			popped.OnClosed();
+
+			while (popped != modalInfo)
+			{
+				popped = _modals.Pop();
+				popped.TitleChanged -= OnModalTitleChanged;
+				popped.OnClosed();
+			}
+
+			if (!_modals.Any())
+			{
+				await AllModalsPopped.InvokeAsync();
+			}
+
+			StateHasChanged();
+		}
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		await base.OnAfterRenderAsync(firstRender);
+	}
+
+	public void Dispose()
+	{
+		while (_modals.Any())
+		{
+			var popped = _modals.Pop();
+
+			popped.TitleChanged -= OnModalTitleChanged;
+		}
+
+		NavigationManager.LocationChanged -= LocationChanged;
+	}
+
+	private async Task<bool> ConfirmCloseIfRequired(ModalContext modalContext)
+	{
+		if (modalContext.ModalComponent != null && modalContext.ModalComponent.ShouldConfirmClose)
+		{
+			bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Any unsaved changes will be discarded.");
+			return confirmed;
+		}
+
+		return true;
+	}
+}

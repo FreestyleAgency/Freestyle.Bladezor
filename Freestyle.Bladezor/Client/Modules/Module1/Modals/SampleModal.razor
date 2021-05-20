@@ -1,0 +1,15 @@
+﻿@inherits ModalBase
+
+<h3>SampleModal</h3>
+
+<Button Text="Close" @onclick="Close" />
+
+@code { 
+	protected override async Task OnInitializedAsync()
+	{
+		Title = "Sample modal";
+		CssClass = "pf-m-width-75 pf-m-width-33-on-lg pf-m-width-25-on-2xl";
+
+		await base.OnInitializedAsync();
+	}
+}

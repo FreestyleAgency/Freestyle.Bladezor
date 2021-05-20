@@ -1,0 +1,336 @@
+﻿@implements Freestyle.Bladezor.Client.Models.IBladeStack
+@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject INavigationState NavigationState
+@inject IJSRuntime JSRuntime
+@inject IPortalService PortalService 
+
+<div class="pf-l-stack">
+	<div class="pf-l-stack__item">
+		<section class="pf-c-page__main-breadcrumb pf-m-limit-width">
+			<div class="pf-c-page__main-body">
+				<Breadcrumb>
+					<BreadcrumbItem Title="@Translations.Breadcrumb_Home" Url="/" />
+					@if (currentModule != null)
+					{
+						<BreadcrumbItem Title="@currentModuleName" Url="@currentModulePath" />
+					}
+					@foreach (var blade in _blades.AsEnumerable().Reverse())
+					{
+						<BreadcrumbItem Title="@blade.Title" OnClick="async e => await PopTo(blade)" />
+					}
+				</Breadcrumb>
+			</div>
+		</section>
+	</div>
+	<div class="pf-l-stack__item pf-m-fill">
+		<div class="bz-stack" @ref="stackContainerRef">
+			@{
+				var top = _blades.FirstOrDefault();
+				var bottom = _blades.LastOrDefault();
+			}
+			@foreach (var blade in _blades.AsEnumerable().Reverse())
+			{
+				var isTop = blade == top;
+				var isBottom = blade == bottom;
+
+				<section @ref="blade.Ref" class="bz-blade pf-u-box-shadow-md-left @(isTop ? "bz-blade-top" : "bz-blade-tail") @(isBottom ? "bz-blade-bottom" : null) @blade.CssClass">
+					<div class="pf-l-stack">
+						<div class="pf-l-stack__item pf-c-page__main-section pf-m-light">
+							<div class="pf-l-split">
+								<div class="pf-l-split__item pf-m-fill">
+									<Content>
+										<header>
+											<h1 class="pf-c-title pf-m-3xl">@blade.Title</h1>
+											@if (!String.IsNullOrEmpty(blade.Subtitle))
+											{
+												<small>@blade.Subtitle</small>
+											}
+										</header>
+									</Content>
+								</div>
+								<div class="pf-l-split__item">
+									<Button ButtonStyle="ButtonStyle.Plain" aria-label="@Translations.BladeStack_Close" @onclick="async e => await PopPast(blade)" IconCssClass="fas fa-times" />
+								</div>
+							</div>
+						</div>
+						<div class="pf-l-stack__item pf-m-fill bz-blade__content">
+							<CascadingValue Name="BladeStack" Value="this">
+								<CascadingValue Name="BladeContext" Value="blade">
+									@blade.RenderFragment
+								</CascadingValue>
+							</CascadingValue>
+						</div>
+					</div>
+				</section>
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+	private Stack<BladeContext> _blades;
+	private string _title;
+
+	private BladeContext scrollToAfterRender;
+	private ElementReference stackContainerRef;
+	private IModule currentModule;
+	private string currentModuleName;
+	private string currentModulePath;
+
+	[Parameter]
+	public string Title
+	{
+		get { return _title; }
+		set
+		{
+			_title = value;
+			StateHasChanged();
+		}
+	}
+
+	[Parameter]
+	public RenderFragment InitialBlade { get; set; }
+
+	[Parameter]
+	public Type InitialBladeType { get; set; }
+
+	public event EventHandler StackChanged;
+
+	/// <summary>
+	/// Read-only access the the current blade stack.
+	/// </summary>
+	public Stack<BladeContext> Blades
+	{
+		get { return new Stack<BladeContext>(_blades); }
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		PortalService.SideNavigationVisibilityChanged += SideNavigationVisibilityChanged;
+		NavigationManager.LocationChanged += LocationChanged;
+
+		currentModule = NavigationState.CurrentModule;
+		if (currentModule != null)
+		{
+			currentModulePath = await currentModule.GetPath();
+			currentModuleName = await currentModule.GetName();
+		}
+
+		await base.OnInitializedAsync();
+	}
+
+	private void SideNavigationVisibilityChanged(object sender, VisibilityEventArgs eventArgs)
+	{
+		if (_blades.Any())
+		{
+			var lastBlade = _blades.Peek();
+			
+			scrollToAfterRender = lastBlade;
+		}
+	}
+
+	private async void LocationChanged(object sender, LocationChangedEventArgs eventArgs)
+	{
+		if (_blades.Any())
+		{
+			_blades = new Stack<BladeContext>();
+
+			await Push(new BladeContext() { RenderFragment = InitialBlade, Title = Title, Url = NavigationManager.Uri, BladeType = InitialBladeType }, false);
+		}
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (_blades == null)
+		{
+			_blades = new Stack<BladeContext>();
+
+			await Push(new BladeContext() { RenderFragment = InitialBlade, Title = Title, Url = NavigationManager.Uri, BladeType = InitialBladeType }, false);
+		}
+
+		await base.OnParametersSetAsync();
+	}
+
+	public async Task Push(BladeContext bladeContext)
+	{
+		await Push(bladeContext, true);
+	}
+
+	private async Task Push(BladeContext bladeContext, bool setUrl)
+	{
+		bladeContext.TitleChanged += OnBladeTitleChanged;
+		bladeContext.SubtitleChanged += OnBladeSubtitleChanged;
+		bladeContext.CssClassChanged += OnCssClassChanged;
+
+		_blades.Push(bladeContext);
+
+		if (setUrl)
+			await JSRuntime.InvokeVoidAsync("bladezorFunctions.setUrl", bladeContext.Url);
+
+		scrollToAfterRender = bladeContext;
+
+		StateHasChanged();
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	private void OnBladeTitleChanged(object sender, ValueEventArgs<string> title)
+	{
+		StateHasChanged();
+	}
+
+	private void OnBladeSubtitleChanged(object sender, ValueEventArgs<string> subtitle)
+	{
+		StateHasChanged();
+	}
+
+	private void OnCssClassChanged(object sender, ValueEventArgs<string> cssClass)
+	{
+		StateHasChanged();
+	}
+
+	public async Task Pop()
+	{
+		if (_blades.Count() <= 1) return;
+
+		if (!await ConfirmCloseIfRequired(_blades.Peek())) return;
+
+		var popped = _blades.Pop();
+
+		popped.TitleChanged -= OnBladeTitleChanged;
+		popped.SubtitleChanged -= OnBladeSubtitleChanged;
+		popped.OnClosed();
+
+		if (!_blades.Any())
+		{
+			// Load module homepage if there are no blades to display
+			NavigationManager.NavigateTo(await NavigationState.CurrentModule.GetPath());
+		}
+		else
+		{
+			await JSRuntime.InvokeVoidAsync("bladezorFunctions.setUrl", _blades.Peek().Url);
+
+			StateHasChanged();
+		}
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	public async Task PopTo(BladeContext bladeInfo)
+	{
+		if (_blades.Count() <= 1) return;
+
+		if (!await ConfirmCloseIfRequired(bladeInfo)) return;
+
+		if (_blades.Contains(bladeInfo))
+		{
+			while (_blades.Peek() != bladeInfo)
+			{
+				var popped = _blades.Pop();
+
+				popped.TitleChanged -= OnBladeTitleChanged;
+				popped.SubtitleChanged -= OnBladeSubtitleChanged;
+				popped.OnClosed();
+			}
+		}
+
+		await JSRuntime.InvokeVoidAsync("bladezorFunctions.setUrl", _blades.Peek().Url);
+
+		StateHasChanged();
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	public async Task PopPast(BladeContext bladeInfo)
+	{
+		if (_blades.Count() <= 1) return;
+
+		if (!await ConfirmCloseIfRequired(bladeInfo)) return;
+
+		if (_blades.Contains(bladeInfo))
+		{
+			BladeContext popped = _blades.Pop();
+			popped.TitleChanged -= OnBladeTitleChanged;
+			popped.SubtitleChanged -= OnBladeSubtitleChanged;
+			popped.OnClosed();
+
+			while (popped != bladeInfo)
+			{
+				popped = _blades.Pop();
+				popped.TitleChanged -= OnBladeTitleChanged;
+				popped.SubtitleChanged -= OnBladeSubtitleChanged;
+				popped.OnClosed();
+			}
+		}
+
+		if (!_blades.Any())
+		{
+			// Load module homepage if there are no blades to display
+			NavigationManager.NavigateTo(await NavigationState.CurrentModule.GetPath());
+		}
+		else
+		{
+			await JSRuntime.InvokeVoidAsync("bladezorFunctions.setUrl", _blades.Peek().Url);
+
+			StateHasChanged();
+		}
+
+		StackChanged?.Invoke(this, EventArgs.Empty);
+	}
+
+	public async Task ReplaceAfter(BladeContext currentBlade, BladeContext newBlade)
+	{
+		if (!await ConfirmCloseIfRequired(currentBlade)) return;
+
+		if (_blades.Contains(currentBlade))
+		{
+			while (_blades.Peek() != currentBlade)
+			{
+				var popped = _blades.Pop();
+
+				popped.TitleChanged -= OnBladeTitleChanged;
+				popped.SubtitleChanged -= OnBladeSubtitleChanged;
+				popped.OnClosed();
+			}
+		}
+
+		await Push(newBlade);
+	}
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (scrollToAfterRender != null && scrollToAfterRender.Ref.Id != null)
+		{
+			await JSRuntime.InvokeVoidAsync("bladezorFunctions.scrollTo", stackContainerRef, scrollToAfterRender.Ref);
+			scrollToAfterRender = null;
+		}
+
+		await base.OnAfterRenderAsync(firstRender);
+	}
+
+	public void Dispose()
+	{
+		while (_blades.Any())
+		{
+			var popped = _blades.Pop();
+
+			popped.TitleChanged -= OnBladeTitleChanged;
+			popped.SubtitleChanged -= OnBladeSubtitleChanged;
+		}
+
+		PortalService.SideNavigationVisibilityChanged -= SideNavigationVisibilityChanged;
+		NavigationManager.LocationChanged -= LocationChanged;
+	}
+
+	private async Task<bool> ConfirmCloseIfRequired(BladeContext bladeContext)
+	{
+		if (bladeContext.BladeComponent != null && bladeContext.BladeComponent.ShouldConfirmClose)
+		{
+			bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Any unsaved changes will be discarded.");
+			return confirmed;
+		}
+
+		return true;
+	}
+}

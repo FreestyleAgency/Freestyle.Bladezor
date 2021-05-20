@@ -1,0 +1,159 @@
+﻿@inject Microsoft.Extensions.Options.IOptions<Freestyle.Bladezor.Client.BladezorOptions> Options
+@inject IPortalService PortalService
+
+@if (!String.IsNullOrEmpty(CustomDrawerIconCssClass))
+{
+	<div class="pf-c-page__header-tools-item pf-m-hidden pf-m-visible-on-lg @(DrawerExpanded && DrawerType == DrawerType.Custom ? CssClassConstants.Selected : String.Empty)">
+		<Tooltip Placement="Placement.Bottom" Text="@CustomDrawerName">
+			<button class="pf-c-button pf-m-plain" type="button" aria-label="@CustomDrawerName" @onclick="async e => await ToggleDrawer(DrawerType.Custom)">
+				<span class="pf-c-notification-badge @(CustomDrawerHasUnread ? "pf-m-unread" : "pf-m-read")">
+					<i class="@CustomDrawerIconCssClass" aria-hidden="true"></i>
+				</span>
+			</button>
+		</Tooltip>
+	</div>
+}
+@if (Options.Value.Notifications.Enabled)
+{
+	<div class="pf-c-page__header-tools-item pf-m-hidden pf-m-visible-on-lg @(DrawerExpanded && DrawerType == DrawerType.Notifications ? CssClassConstants.Selected : String.Empty)">
+		<Tooltip Placement="Placement.Bottom" Text="@Translations.MainLayout_DrawerHeading_Notifications">
+			<button class="pf-c-button pf-m-plain" type="button" aria-label="Notifications" aria-expanded="false" @onclick="async e => await ToggleDrawer(DrawerType.Notifications)">
+				<span class="pf-c-notification-badge @(HasUnreadDangerNotifications ? "pf-m-attention" : (HasUnreadNotifications ? "pf-m-unread" : "pf-m-read"))">
+					<i class="fas @(HasUnreadDangerNotifications ? "pf-icon-attention-bell" : "pf-icon-bell")" aria-hidden="true"></i>
+				</span>
+			</button>
+		</Tooltip>
+	</div>
+}
+@if (Options.Value.Settings.Enabled)
+{
+	<div class="pf-c-page__header-tools-item pf-m-hidden pf-m-visible-on-lg @(DrawerExpanded && DrawerType == DrawerType.Settings ? CssClassConstants.Selected : String.Empty)">
+		<Tooltip Placement="Placement.Bottom" Text="@Translations.MainLayout_DrawerHeading_Settings">
+			<button class="pf-c-button pf-m-plain" type="button" aria-label="Settings" @onclick="async e => await ToggleDrawer(DrawerType.Settings)">
+				<span class="pf-c-notification-badge pf-m-read">
+					<i class="fas fa-cog" aria-hidden="true"></i>
+				</span>
+			</button>
+		</Tooltip>
+	</div>
+}
+@if (Options.Value.HelpSystem.Enabled)
+{
+	<Tooltip Placement="Placement.Bottom" Text="@Translations.MainLayout_DrawerHeading_Help">
+		<div class="pf-c-page__header-tools-item pf-m-hidden pf-m-visible-on-lg @(DrawerExpanded && DrawerType == DrawerType.Help ? CssClassConstants.Selected : String.Empty)">
+			<button class="pf-c-button pf-m-plain" type="button" aria-label="Help" @onclick="async e => await ToggleDrawer(DrawerType.Help)">
+				<span class="pf-c-notification-badge pf-m-read">
+					<i class="pf-icon pf-icon-help" aria-hidden="true"></i>
+				</span>
+			</button>
+		</div>
+	</Tooltip>
+}
+@if (!String.IsNullOrEmpty(CustomDrawerIconCssClass) || Options.Value.Notifications.Enabled || Options.Value.Settings.Enabled || Options.Value.HelpSystem.Enabled)
+{
+	<div class="pf-c-page__header-tools-item pf-m-hidden-on-lg">
+		<Dropdown Mode="DropdownMode.Kebab">
+			@if (!String.IsNullOrEmpty(CustomDrawerIconCssClass))
+			{
+				<DropdownButtonMenuItem Text="@CustomDrawerName" OnClick="e => ToggleDrawer(DrawerType.Custom)" />
+			}
+			@if (Options.Value.Notifications.Enabled)
+			{
+				<DropdownButtonMenuItem Text="Notifications" OnClick="e => ToggleDrawer(DrawerType.Notifications)" />
+			}
+			@if (Options.Value.Settings.Enabled)
+			{
+				<DropdownButtonMenuItem Text="Settings" OnClick="e => ToggleDrawer(DrawerType.Settings)" />
+			}
+			@if (Options.Value.HelpSystem.Enabled)
+			{
+				<DropdownButtonMenuItem Text="Help" OnClick="e => ToggleDrawer(DrawerType.Help)" />
+			}
+		</Dropdown>
+	</div>
+}
+
+@code {
+	private bool _drawerExpanded;
+	private DrawerType _drawerType;
+
+	[Parameter]
+	public bool DrawerExpanded
+	{
+		get { return _drawerExpanded; }
+		set
+		{
+			if (value == _drawerExpanded) return;
+
+			_drawerExpanded = value;
+
+			if (DrawerExpandedChanged.HasDelegate)
+				DrawerExpandedChanged.InvokeAsync(value);
+		}
+	}
+
+	[Parameter]
+	public EventCallback<bool> DrawerExpandedChanged { get; set; }
+
+	[Parameter]
+	public DrawerType DrawerType
+	{
+		get { return _drawerType; }
+		set
+		{
+			if (value == _drawerType) return;
+
+			_drawerType = value;
+
+			if (DrawerTypeChanged.HasDelegate)
+				DrawerTypeChanged.InvokeAsync(value);
+		}
+	}
+
+	[Parameter]
+	public EventCallback<DrawerType> DrawerTypeChanged { get; set; }
+
+	[Parameter]
+	public bool HasUnreadNotifications { get; set; }
+
+	[Parameter]
+	public bool HasUnreadDangerNotifications { get; set; }
+
+	[Parameter]
+	public string CustomDrawerName { get; set; }
+
+	[Parameter]
+	public string CustomDrawerIconCssClass { get; set; }
+
+	[Parameter]
+	public bool CustomDrawerHasUnread { get; set; }
+
+	private async Task ToggleDrawer(DrawerType dt)
+	{
+		if (DrawerType == DrawerType.Modal && DrawerExpanded)
+		{
+			await PortalService.ModalStack.PopAll(false);
+
+			if (PortalService.ModalStack.Any())
+			{
+				DrawerType = DrawerType.Modal;
+				return;
+			}
+
+			DrawerExpanded = true;
+			DrawerType = dt;
+		}
+		else
+		{
+			if (dt == DrawerType && DrawerExpanded)
+			{
+				DrawerExpanded = false;
+			}
+			else
+			{
+				DrawerExpanded = true;
+				DrawerType = dt;
+			}
+		}
+	}
+}

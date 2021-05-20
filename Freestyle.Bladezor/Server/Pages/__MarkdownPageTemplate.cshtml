@@ -1,0 +1,28 @@
+﻿@model Westwind.AspNetCore.Markdown.MarkdownModel
+@{
+	ViewBag.Title = Model.Title;
+	Layout = "_Layout";
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<title>@ViewBag.Title</title>
+	<base href="/" />
+	<link href="/css/patternfly.css" rel="stylesheet" />
+	<link href="/css/patternfly-addons.css" rel="stylesheet" />
+	<link href="/css/app.css" rel="stylesheet" />
+	<script src="/_content/Freestyle.Blazor.Patternfly/patternfly-blazor-util.js"></script>
+	<script src="/js/bladezor-util.js"></script>
+</head>
+
+<body>
+	<div class="pf-c-content">
+		@Model.RenderedMarkdown
+	</div>
+</body>
+
+</html>

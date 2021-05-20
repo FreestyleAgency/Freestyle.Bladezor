@@ -1,0 +1,37 @@
+﻿@inject IPortalService PortalService
+
+<Button AutoLoadingState="false" ButtonStyle="ButtonStyle" Text="@Text" IconCssClass="@IconCssClass" IconPosition="IconPosition" Enabled="Enabled" Block="Block" Size="Size" @onclick="Intercept" type="button" />
+
+@code {
+	[Parameter]
+	public string Url { get; set; }
+
+	[Parameter]
+	public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Primary;
+
+	[Parameter]
+	public string Text { get; set; }
+
+	[Parameter]
+	public string IconCssClass { get; set; }
+
+	[Parameter]
+	public LeftRightHorizontalAlignment IconPosition { get; set; } = LeftRightHorizontalAlignment.Left;
+
+	[Parameter]
+	public bool Enabled { get; set; } = true;
+
+	[Parameter]
+	public bool Block { get; set; }
+
+	[Parameter]
+	public ButtonSize Size { get; set; }
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public IDictionary<string, object> AdditionalAttributes { get; set; }
+
+	private async Task Intercept()
+	{
+		PortalService.ShowHelpTopic(Url);
+	}
+}

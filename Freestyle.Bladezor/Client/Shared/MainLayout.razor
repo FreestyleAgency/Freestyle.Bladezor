@@ -1,0 +1,14 @@
+﻿@inherits LayoutComponentBase
+
+<PortalPage CustomDrawerName="Custom" CustomDrawerIconCssClass="fas fa-magic">
+	<UserMenuOptions>
+		<DropdownLinkMenuItem Href="/user/account" Text="Account" />
+		<DropdownSeparator />
+		<DropdownLinkMenuItem Href="/logout" Text="Sign out" />
+	</UserMenuOptions>
+	<ChildContent>
+		@Body
+	</ChildContent>
+	<SettingsDrawer></SettingsDrawer>
+	<CustomDrawer><Content><p>This is the custom drawer.</p></Content></CustomDrawer>
+</PortalPage>

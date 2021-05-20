@@ -1,0 +1,12 @@
+﻿@inherits BladeBase
+@page "/common/iframe"
+
+<iframe src="@Src" @attributes="AdditionalAttributes" style="width: 100%; height: 100%;"></iframe>
+
+@code {
+	[Parameter]
+	public string Src { get; set; } = "https://www.freestyle.agency";
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public IDictionary<string, object> AdditionalAttributes { get; set; }
+}

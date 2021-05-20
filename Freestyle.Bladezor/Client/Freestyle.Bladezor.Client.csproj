@@ -1,0 +1,96 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="5.0.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="5.0.2" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="5.0.2" />
+    <PackageReference Include="System.Net.Http.Json" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Freestyle.Bladezor.Client.Components\Freestyle.Bladezor.Client.Components.csproj" />
+    <ProjectReference Include="..\..\Freestyle.Bladezor.Client.Core\Freestyle.Bladezor.Client.Core.csproj" />
+    <ProjectReference Include="..\Shared\Freestyle.Bladezor.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\css\assets\fontawesome\fontawesome.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_animated.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_bordered-pulled.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_core.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_fixed-width.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_icons.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_larger.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_list.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_mixins.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_rotated-flipped.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_screen-reader.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_stacked.scss" />
+    <None Include="wwwroot\css\assets\fontawesome\_variables.scss" />
+    <None Include="wwwroot\css\assets\fonts\overpass-mono-webfont\overpass-mono-bold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-mono-webfont\overpass-mono-light.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-mono-webfont\overpass-mono-regular.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-mono-webfont\overpass-mono-semibold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-bold-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-bold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-extrabold-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-extrabold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-extralight-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-extralight.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-heavy-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-heavy.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-light-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-light.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-regular.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-semibold-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-semibold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-thin-italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\overpass-webfont\overpass-thin.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-Black.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-BlackItalic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-Bold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-BoldItalic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-Italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-Medium.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-MediumItalic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatDisplay\RedHatDisplay-Regular.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-Bold.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-BoldItalic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-Italic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-Medium.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-MediumItalic.woff2" />
+    <None Include="wwwroot\css\assets\fonts\RedHatText\RedHatText-Regular.woff2" />
+    <None Include="wwwroot\css\assets\fonts\webfonts\fa-solid-900.svg" />
+    <None Include="wwwroot\css\assets\fonts\webfonts\fa-solid-900.woff2" />
+    <None Include="wwwroot\css\assets\images\background-filter.svg" />
+    <None Include="wwwroot\css\assets\images\img_avatar.svg" />
+    <None Include="wwwroot\css\assets\images\logo-dropbox-old.svg" />
+    <None Include="wwwroot\css\assets\images\logo-dropbox.svg" />
+    <None Include="wwwroot\css\assets\images\logo-facebook.svg" />
+    <None Include="wwwroot\css\assets\images\logo-github.svg" />
+    <None Include="wwwroot\css\assets\images\logo-gitlab.svg" />
+    <None Include="wwwroot\css\assets\images\logo-google.svg" />
+    <None Include="wwwroot\css\assets\images\logo-google2.svg" />
+    <None Include="wwwroot\css\assets\images\l_pf-reverse.svg" />
+    <None Include="wwwroot\css\assets\images\pf-logo-small.svg" />
+    <None Include="wwwroot\css\assets\images\PF-Masthead-Logo.svg" />
+    <None Include="wwwroot\css\assets\images\pf_logo.svg" />
+    <None Include="wwwroot\css\assets\images\pf_logo_color.svg" />
+    <None Include="wwwroot\css\assets\images\pf_mini_logo_white.svg" />
+    <None Include="wwwroot\css\assets\pficon\pficon-test.svg" />
+    <None Include="wwwroot\css\assets\pficon\pficon-test.woff2" />
+    <None Include="wwwroot\css\assets\pficon\pficon.scss" />
+    <None Include="wwwroot\css\assets\pficon\pficon.svg" />
+    <None Include="wwwroot\css\assets\pficon\pficon.woff2" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <Authors>Freestyle Interactive Ltd.</Authors>
+    <Product>Bladezor</Product>
+    <Description>Razor/Blazor shared models for Bladezor portal framework.</Description>
+	  <AssemblyVersion>1.0.0.1</AssemblyVersion>
+	  <FileVersion>1.0.0.1</FileVersion>
+	  <VersionPrefix>1.0.1</VersionPrefix>
+	  <VersionSuffix>$(VersionSuffix)</VersionSuffix>
+    <PackageIcon>FS-Splash.png</PackageIcon>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<None Include="FS-Splash.png">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
+
+</Project>

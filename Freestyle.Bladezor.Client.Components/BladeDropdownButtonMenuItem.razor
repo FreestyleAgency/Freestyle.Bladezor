@@ -1,0 +1,138 @@
+﻿@implements IDisposable
+@using System.Reflection
+@using System.Collections.Generic
+@using System.Collections.ObjectModel
+@inject INavigationState NavigationState
+@inject IPortalService PortalService
+
+<li>
+	<button class="pf-c-dropdown__menu-item @(!String.IsNullOrEmpty(IconUrl) || !String.IsNullOrEmpty(IconCssClass) ? CssClassConstants.Icon : String.Empty) @(!Enabled ? CssClassConstants.Disabled : String.Empty)" type="button" @onclick="Intercept" @attributes="AdditionalAttributes" @onclick:stopPropagation="true">
+		<div class="pf-c-dropdown__menu-item-main">
+			@if (!String.IsNullOrEmpty(IconUrl) || !String.IsNullOrEmpty(IconCssClass))
+			{
+				<span class="pf-c-dropdown__menu-item-icon">
+					@if (!String.IsNullOrEmpty(IconUrl))
+					{
+						<img src="@IconUrl" alt="Icon" aria-hidden="true" />
+					}
+					else
+					{
+						<i class="@IconCssClass" aria-hidden="true"></i>
+					}
+				</span>
+			}@Text
+		</div>
+		@if (!String.IsNullOrEmpty(Description))
+		{
+			<div class="pf-c-dropdown__menu-item-description">@Description</div>
+		}
+	</button>
+</li>
+
+@code {
+	static readonly ReadOnlyDictionary<string, object> _emptyParametersDictionary = new ReadOnlyDictionary<string, object>(new Dictionary<string, object>());
+
+	private bool active = false;
+
+	[Parameter]
+	public string Url { get; set; }
+
+	[Parameter]
+	public string BladeTitle { get; set; }
+
+	[Parameter]
+	public string BladeSubtitle { get; set; }
+
+	[CascadingParameter(Name = "Router")]
+	public Router Router { get; set; }
+
+	[Parameter]
+	public string BladeCssClass { get; set; }
+
+	[Parameter]
+	public EventCallback<BladeContext> BladeShown { get; set; }
+
+	[Parameter]
+	public EventCallback<BladeContext> BladeClosed { get; set; }
+
+	[Parameter]
+	public EventCallback<object> BladeReturnValueChanged { get; set; }
+
+	[CascadingParameter(Name = "BladeContext")]
+	public BladeContext BladeContext { get; set; }
+
+	[CascadingParameter(Name = "BladeStack")]
+	public BladeStack BladeStack { get; set; }
+
+	[Parameter]
+	public string IconUrl { get; set; }
+
+	[Parameter]
+	public string IconCssClass { get; set; }
+
+	[Parameter]
+	public string Text { get; set; }
+
+	[Parameter]
+	public string Description { get; set; }
+
+	[Parameter]
+	public bool Enabled { get; set; } = true;
+
+	[CascadingParameter(Name = "Dropdown")]
+	public Dropdown Dropdown { get; set; }
+
+	[CascadingParameter(Name = "DropdownGroup")]
+	public DropdownGroup DropdownGroup { get; set; }
+
+	[Parameter]
+	public bool CollapseOnClick { get; set; } = true;
+
+	[Parameter(CaptureUnmatchedValues = true)]
+	public IDictionary<string, object> AdditionalAttributes { get; set; }
+
+	protected override void OnInitialized()
+	{
+		if (Dropdown.HasGroups && DropdownGroup == null)
+			throw new Exception("All menu items must be within a DropdownGroup if an Dropdown contains at least 1 group.");
+
+		BladeStack.StackChanged += OnStackChanged;
+
+		base.OnInitialized();
+	}
+
+	private void OnStackChanged(object sender, EventArgs eventArgs)
+	{
+		active = BladeStack.Blades.Any(x => x.Url == Url);
+	}
+
+	private async Task Intercept()
+	{
+		var bladeContext = await PortalService.OpenBlade(
+			context =>
+			{
+				context.Title = BladeTitle;
+				context.Subtitle = BladeSubtitle;
+				context.CssClass = BladeCssClass;
+
+				context.Closed += (s, e) => BladeClosed.InvokeAsync(context);
+				context.ReturnValueChanged += (s, e) => BladeReturnValueChanged.InvokeAsync(e.Value);
+			},
+			Url,
+			Router,
+			BladeStack,
+			BladeContext,
+			AdditionalAttributes
+		);
+
+		await BladeShown.InvokeAsync(bladeContext);
+
+		if (CollapseOnClick)
+			Dropdown.Collapse();
+	}
+
+	public void Dispose()
+	{
+		BladeStack.StackChanged -= OnStackChanged;
+	}
+}

@@ -1,0 +1,29 @@
+﻿@inherits BladeBase
+@layout StackLayout
+@page "/module1/stack/{StackId:int}/list/detail"
+
+<div class="pf-c-page__main-section pf-m-light">
+	<Content>
+		<p>This is a detail blade for this stack.</p>
+	</Content>
+	<ModalButton Text="Open modal" TModal="Freestyle.Bladezor.Client.Modules.Module1.Modals.SampleModal" />
+	<ModalTile Title="Open modal" TModal="Freestyle.Bladezor.Client.Modules.Module1.Modals.SampleModal">This is a description</ModalTile>
+	<Button Text="Close" @onclick="Close" />
+</div>
+
+@code {
+	[Parameter]
+	public int StackId { get; set; }
+
+	public override bool ShouldConfirmClose
+	{
+		get { return true; }
+	}
+
+	protected override void OnParametersSet()
+	{
+		Title = "This is a detail page";
+
+		base.OnParametersSet();
+	}
+}

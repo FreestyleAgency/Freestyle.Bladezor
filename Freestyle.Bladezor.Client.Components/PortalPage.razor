@@ -1,0 +1,349 @@
+﻿@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject Freestyle.Bladezor.Client.Services.INavigationState NavigationState
+@inject IPortalService PortalService
+@inject Freestyle.Bladezor.Client.Services.INotificationService NotificationService
+@inject Microsoft.Extensions.Options.IOptions<Freestyle.Bladezor.Client.BladezorOptions> Options
+@inject IBrandingService BrandingService
+
+<PFPage LogoUrl="@logoUrl" LogoAltText="@logoAltText" SidebarEnabled="@sidebarEnabled" @bind-SidebarExpanded="SidebarExpanded" @bind-DrawerExpanded="drawerExpanded" DrawerNoPadding="(drawerType == DrawerType.Notifications)" DrawerShowClose="true" DrawerShowHeader="(drawerType != DrawerType.Notifications)" AdditionalCssClass="@GetPageCssClass()" DrawerPanelAdditionalCssClass="@(drawerType == DrawerType.Modal ? ModalDrawerCssClass : String.Empty)">
+	<HeaderNav>
+		@ContextSelector
+		<TopNav />
+	</HeaderNav>
+	<HeaderTools>
+		@if (Options.Value.PortalSearch.Enabled)
+		{
+			<div class="pf-c-page__header-tools-group">
+				<PortalSearch />
+			</div>
+		}
+		@AdditionalHeaderToolsGroups
+		<div class="pf-c-page__header-tools-group">
+			<DrawerToggleButtons @bind-DrawerExpanded="drawerExpanded" @bind-DrawerType="drawerType" HasUnreadNotifications="hasUnreadNotifications" HasUnreadDangerNotifications="hasUnreadDangerNotifications" CustomDrawerName="@CustomDrawerName" CustomDrawerIconCssClass="@CustomDrawerIconCssClass" CustomDrawerHasUnread="CustomDrawerHasUnread" />
+		</div>
+		@UserHeaderToolsGroup
+	</HeaderTools>
+	<Sidebar>
+		<SideNav />
+	</Sidebar>
+	<BeforeMain>@BeforeMain</BeforeMain>
+	<ChildContent>
+		@if (Options.Value.Notifications.Enabled && toastNotifications != null && toastNotifications.Any())
+		{
+			<AlertGroup Toast="true">
+				@foreach (var notification in toastNotifications)
+				{
+					var importance = GetImportance(notification);
+					<AlertGroupItem @key="notification.Id" Importance="importance" Title="@notification.Title" ShowCloseButton="true" VisibleChanged="async v => { if (!v) { await NotificationService.DismissToastNotification(notification); } }">
+						<ChildContent>
+							@notification.Description
+							@if (notification.ProgressPercent.HasValue)
+							{
+								<Progress Importance="importance" CurrentValue="@notification.ProgressPercent.Value" ShowStatusIcon="false" Size="Size.Small" ProgressTextPosition="InsideOutsidePosition.Outside" />
+							}
+						</ChildContent>
+						<Actions>
+							@if (notification.ActionLinks != null) {
+								foreach (var actionLink in notification.ActionLinks)
+								{
+									<LinkButton Href="@actionLink.Url" Text="@actionLink.Title" target="@actionLink.Target" />
+								}
+							}
+						</Actions>
+					</AlertGroupItem>
+				}
+			</AlertGroup>
+		}
+
+		@ChildContent
+
+		@if (drawerExpanded && drawerType == DrawerType.Modal)
+		{
+			<div class="bz-modal-blocker"></div>
+		}
+	</ChildContent>
+	<DrawerHeader>
+		@if (drawerExpanded)
+		{
+			@if (drawerType == DrawerType.Help)
+			{
+				<h1 class="pf-c-title pf-m-lg">@Translations.MainLayout_DrawerHeading_Help</h1>
+			}
+			else if (drawerType == DrawerType.Settings)
+			{
+				<h1 class="pf-c-title pf-m-lg">@Translations.MainLayout_DrawerHeading_Settings</h1>
+			}
+			else if (drawerType == DrawerType.Custom)
+			{
+				<h1 class="pf-c-title pf-m-lg">@CustomDrawerName</h1>
+			}
+			else if (drawerType == DrawerType.Modal)
+			{
+				<h1 class="pf-c-title pf-m-lg">@ModalDrawerTitle</h1>
+			}
+		}
+	</DrawerHeader>
+	<Drawer>
+		<Drawers @bind-DrawerExpanded="drawerExpanded" @bind-DrawerType="drawerType" Notifications="notifications">
+			<SettingsDrawer>@SettingsDrawer</SettingsDrawer>
+			<CustomDrawer>@CustomDrawer</CustomDrawer>
+		</Drawers>
+	</Drawer>
+</PFPage>
+
+@code {
+	bool sidebarEnabled = false;
+	bool hasUnreadNotifications = false;
+	bool hasUnreadDangerNotifications = false;
+	bool drawerExpanded = false;
+	DrawerType drawerType;
+	string logoUrl;
+	string logoAltText;
+	bool loaded;
+
+	IEnumerable<Freestyle.Bladezor.Shared.Notification> toastNotifications = new List<Freestyle.Bladezor.Shared.Notification>();
+	IEnumerable<Freestyle.Bladezor.Shared.Notification> notifications = new List<Freestyle.Bladezor.Shared.Notification>();
+
+	bool _sidebarExpanded = true;
+
+	[Parameter]
+	public RenderFragment ChildContent { get; set; }
+
+	[Parameter]
+	public RenderFragment UserMenuOptions { get; set; }
+
+	[Parameter]
+	public RenderFragment SettingsDrawer { get; set; }
+
+	[Parameter]
+	public RenderFragment BeforeMain { get; set; }
+
+	[Parameter]
+	public RenderFragment CustomDrawer { get; set; }
+
+	[Parameter]
+	public RenderFragment ContextSelector { get; set; }
+
+	[Parameter]
+	public string AdditionalCssClass { get; set; }
+
+	[Parameter]
+	public string CustomDrawerName { get; set; }
+
+	[Parameter]
+	public string CustomDrawerIconCssClass { get; set; }
+
+	[Parameter]
+	public bool CustomDrawerHasUnread { get; set; }
+
+	[Parameter]
+	public RenderFragment AdditionalHeaderToolsGroups { get; set; }
+
+	[Parameter]
+	public RenderFragment UserHeaderToolsGroup { get; set; }
+
+	[Parameter]
+	public Func<Task<string>> AccessTokenProvider { get; set; }
+
+	private bool SidebarExpanded
+	{
+		get { return _sidebarExpanded; }
+		set
+		{
+			if (_sidebarExpanded == value) return;
+
+			_sidebarExpanded = value;
+
+			PortalService.UpdateSideNavigationVisibility(value);
+		}
+	}
+
+	private string ModalDrawerTitle
+	{
+		get
+		{
+			if (PortalService.ModalStack.Any())
+				return PortalService.ModalStack.Top().Title;
+
+			return null;
+		}
+	}
+
+	private string ModalDrawerCssClass
+	{
+		get
+		{
+			if (PortalService.ModalStack.Any())
+				return PortalService.ModalStack.Top().CssClass;
+
+			return null;
+		}
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (!loaded)
+		{
+			NavigationState.CurrentModuleChanged += async (o, e) =>
+			{
+				await UpdateHasNavItems();
+			};
+			NavigationState.CurrentModuleStateChanged += async (o, e) =>
+			{
+				await UpdateHasNavItems();
+			};
+
+			await UpdateHasNavItems();
+
+			logoUrl = await BrandingService.GetLogoUrl();
+			logoAltText = await BrandingService.GetLogoAltText();
+
+			PortalService.ShowHelpTopicRequested += OnShowHelpTopicRequested;
+
+			await NavigationState.InitializeAsync();
+
+			if (Options.Value.Notifications.Enabled)
+			{
+				NotificationService.NotificationsAdded += OnNotificationsAdded;
+				NotificationService.ToastNotificationsAdded += OnToastNotificationsAdded;
+				NotificationService.NotificationsRemoved += OnNotificationsRemoved;
+				NotificationService.NotificationsUpdated += OnNotificationsUpdated;
+				NotificationService.ToastNotificationsRemoved += OnToastNotificationsRemoved;
+
+				await NotificationService.Connect(NavigationManager.BaseUri, AccessTokenProvider);
+				await UpdateNotifications();
+			}
+
+			if (PortalService.ModalStack != null)
+			{
+				PortalService.ModalStack.CurrentModalTitleChanged += OnCurrentModalTitleChanged;
+				PortalService.ModalStack.CurrentModalCssClassChanged += OnCurrentModalCssClassChanged;
+			}
+
+			loaded = true;
+		}
+
+		await base.OnInitializedAsync();
+	}
+
+	private async Task UpdateHasNavItems()
+	{
+		sidebarEnabled = NavigationState.CurrentModule != null && (await NavigationState.CurrentModule.GetRootNavItems()).Any();
+
+		StateHasChanged();
+	}
+
+	private void OnCurrentModalTitleChanged(object sender, EventArgs eventArgs)
+	{
+		if (drawerType == DrawerType.Modal)
+			StateHasChanged();
+	}
+
+	private void OnCurrentModalCssClassChanged(object sender, EventArgs eventArgs)
+	{
+		if (drawerType == DrawerType.Modal)
+			StateHasChanged();
+	}
+
+	private async Task UpdateNotifications()
+	{
+		if (Options.Value.Notifications.Enabled)
+		{
+			notifications = await NotificationService.GetNotifications();
+			toastNotifications = await NotificationService.GetToastNotifications();
+		}
+
+		UpdateNotificationIndicators();
+	}
+
+	private void UpdateNotificationIndicators()
+	{
+		hasUnreadNotifications = notifications.Any(x => !x.Read);
+		hasUnreadDangerNotifications = notifications.Any(x => !x.Read && x.Severity == Bladezor.Shared.NotificationSeverity.Danger);
+	}
+
+	private void OnShowHelpTopicRequested(object sender, HelpTopicEventArgs eventArgs)
+	{
+		drawerType = DrawerType.Help;
+		drawerExpanded = true;
+
+		StateHasChanged();
+	}
+
+	private Importance GetImportance(Freestyle.Bladezor.Shared.Notification notification)
+	{
+		switch (notification.Severity)
+		{
+			case Bladezor.Shared.NotificationSeverity.Default: return Importance.Default;
+			case Bladezor.Shared.NotificationSeverity.Info: return Importance.Information;
+			case Bladezor.Shared.NotificationSeverity.Success: return Importance.Success;
+			case Bladezor.Shared.NotificationSeverity.Warning: return Importance.Warning;
+			case Bladezor.Shared.NotificationSeverity.Danger: return Importance.Danger;
+		}
+
+		return Importance.Default;
+	}
+
+	private void OnNotificationsAdded(object sender, NotificationsEventArgs eventArgs)
+	{
+		notifications = notifications.Union(eventArgs.Notifications).ToList();
+
+		StateHasChanged();
+	}
+
+	private void OnToastNotificationsAdded(object sender, NotificationsEventArgs eventArgs)
+	{
+		toastNotifications = toastNotifications.Union(eventArgs.Notifications).ToList();
+
+		StateHasChanged();
+	}
+
+	private void OnNotificationsRemoved(object sender, NotificationsEventArgs eventArgs)
+	{
+		var removedNotifications = eventArgs.Notifications.ToList();
+		notifications = notifications.Where(x => !removedNotifications.Any(y => y.Id == x.Id)).ToList();
+		toastNotifications = toastNotifications.Where(x => !removedNotifications.Any(y => y.Id == x.Id)).ToList();
+
+		StateHasChanged();
+	}
+
+	private void OnNotificationsUpdated(object sender, NotificationsEventArgs eventArgs)
+	{
+		UpdateNotificationIndicators();
+
+		StateHasChanged();
+	}
+
+	private void OnToastNotificationsRemoved(object sender, NotificationsEventArgs eventArgs)
+	{
+		var removedNotifications = eventArgs.Notifications.ToList();
+		toastNotifications = toastNotifications.Where(x => !removedNotifications.Any(y => y.Id == x.Id)).ToList();
+
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		PortalService.ShowHelpTopicRequested -= OnShowHelpTopicRequested;
+
+		if (Options.Value.Notifications.Enabled)
+		{
+			NotificationService.NotificationsAdded -= OnNotificationsAdded;
+			NotificationService.ToastNotificationsAdded -= OnToastNotificationsAdded;
+			NotificationService.NotificationsRemoved -= OnNotificationsRemoved;
+			NotificationService.NotificationsUpdated -= OnNotificationsUpdated;
+			NotificationService.ToastNotificationsRemoved -= OnToastNotificationsRemoved;
+		}
+	}
+
+	private string GetPageCssClass() {
+		if (drawerExpanded && drawerType == DrawerType.Modal)
+		{
+			return "bz-modal-open " + AdditionalCssClass;
+		}
+
+		return AdditionalCssClass;
+	}
+
+}

@@ -1,0 +1,66 @@
+﻿@inject IPortalSearchProvider SearchProvider
+@inject Microsoft.Extensions.Options.IOptions<Freestyle.Bladezor.Client.BladezorOptions> Options
+
+<form @onsubmit="HandleSubmit" @onsubmit:preventDefault @onsubmit:stopPropagation>
+	<SearchInput @bind-QueryText="SearchQuery" TotalMatches="_totalResults" @bind-SelectedMatchIndex="SelectedMatchIndex" SelectedMatchText="@_selectedMatchText" EnableMatchNavigation="Options.Value.PortalSearch.EnableMatchNavigation" />
+</form>
+
+@code {
+	private string _searchQuery;
+	private int _totalResults;
+	private IEnumerable<SearchQuickMatchResult> _results;
+	private int? _selectedMatchIndex;
+	private string _selectedMatchText;
+
+	private string SearchQuery
+	{
+		get
+		{
+			return _searchQuery;
+		}
+		set
+		{
+			_searchQuery = value;
+
+			if (Options.Value.PortalSearch.EnableMatchNavigation)
+			{
+				_results = SearchProvider.GetQuickMatchResults(_searchQuery).Result;
+				_totalResults = _results.Count();
+			}
+			else
+			{
+				_results = null;
+				_totalResults = SearchProvider.GetQuickMatchResultsCount(_searchQuery).Result;
+			}
+		}
+	}
+
+	private int? SelectedMatchIndex
+	{
+		get
+		{
+			return _selectedMatchIndex;
+		}
+		set
+		{
+			_selectedMatchIndex = value;
+
+			if (_selectedMatchIndex.HasValue)
+				_selectedMatchText = _results.Skip(value.Value).First().Text;
+			else
+				_selectedMatchText = null;
+		}
+	}
+
+	private async Task HandleSubmit()
+	{
+		if (SelectedMatchIndex.HasValue)
+		{
+			await SearchProvider.NavigateToQuickMatchResult(_results.Skip(SelectedMatchIndex.Value).First());
+		}
+		else
+		{
+			await SearchProvider.NavigateToSearchResults(SearchQuery);
+		}
+	}
+}

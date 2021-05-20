@@ -1,0 +1,11 @@
+@inherits LayoutComponentBase
+@implements IStackLayout
+@layout MainLayout
+
+<BladeStack>
+	<InitialBlade>
+		<CascadingValue Name="StackLayout" Value="this" IsFixed="true">
+			@Body
+		</CascadingValue>
+	</InitialBlade>
+</BladeStack>

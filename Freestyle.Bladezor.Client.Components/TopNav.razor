@@ -1,0 +1,45 @@
+﻿@implements IDisposable
+@inject Freestyle.Bladezor.Client.Services.INavigationService NavigationService
+
+@if (modules != null && modules.Any())
+{
+	<Nav Mode="NavMode.Horizontal">
+		<NavList>
+			@foreach (var item in modules)
+			{
+				<ModuleNavItem Module="item" />
+			}
+		</NavList>
+	</Nav>
+}
+
+@code {
+	IEnumerable<IModule> modules;
+
+	protected override async Task OnInitializedAsync()
+	{
+		NavigationService.ModulesChanged += HandleStateChanged;
+
+		if (modules == null)
+			await UpdateModules();
+
+		await base.OnInitializedAsync();
+	}
+
+	private async void HandleStateChanged(object sender, EventArgs eventArgs)
+	{
+		await UpdateModules();
+		
+		StateHasChanged();
+	}
+
+	private async Task UpdateModules()
+	{
+		modules = await NavigationService.GetModules();
+	}
+
+	public void Dispose()
+	{
+		NavigationService.ModulesChanged -= HandleStateChanged;
+	}
+}

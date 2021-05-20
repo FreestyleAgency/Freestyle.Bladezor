@@ -1,0 +1,81 @@
+﻿@implements IDisposable
+
+@if (authorized)
+{
+	<NavItem Text="@name" Href="@path" @key="@path" IconCssClass="@iconCssClass" />
+}
+
+@code {
+	INavItem _navItem;
+
+	bool loaded;
+	bool authorized;
+	string name;
+	string path;
+	string iconCssClass;
+
+	[Parameter]
+	public INavItem NavItem {
+		get { return _navItem; }
+		set
+		{
+			if (_navItem == value) return;
+
+			if (_navItem != null)
+			{
+				_navItem.AuthorizationChanged -= HandleStateChanged;
+				_navItem.NameChanged -= HandleStateChanged;
+				_navItem.PathChanged -= HandleStateChanged;
+				_navItem.IconCssClassChanged -= HandleStateChanged;
+			}
+
+			_navItem = value;
+
+			_navItem.AuthorizationChanged += HandleStateChanged;
+			_navItem.NameChanged += HandleStateChanged;
+			_navItem.PathChanged += HandleStateChanged;
+			_navItem.IconCssClassChanged += HandleStateChanged;
+
+			loaded = false;
+		}
+	}
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (!loaded)
+		{
+			loaded = true;
+
+			await UpdateState();
+		}
+
+		await base.OnParametersSetAsync();
+	}
+
+	private async void HandleStateChanged(object sender, EventArgs eventArgs)
+	{
+		await UpdateState();
+	}
+
+	private async Task UpdateState()
+	{
+		authorized = await NavItem.IsAuthorized();
+
+		if (authorized)
+		{
+			name = await NavItem.GetName();
+			path = await NavItem.GetPath();
+			iconCssClass = await NavItem.GetIconCssClass();
+		}
+
+		StateHasChanged();
+	}
+
+	public void Dispose()
+	{
+		NavItem.AuthorizationChanged -= HandleStateChanged;
+		NavItem.NameChanged -= HandleStateChanged;
+		NavItem.PathChanged -= HandleStateChanged;
+		NavItem.IconCssClassChanged -= HandleStateChanged;
+	}
+}
